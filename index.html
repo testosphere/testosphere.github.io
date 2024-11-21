@@ -47,10 +47,10 @@ function search(ele) {
 						for (var j = 0; j < users[i].labels.length; j++) {
 							var label = users[i].labels[j];
 							
-							element.innerHTML += `<h1>${label.name}</h1><h2>Reasoning: ${label.reasoning}</h2><h3>Justification:</h3>`;
-							var justification = users[i].labels[j].justification;
-							for (var k = 0; k < justification.length; k++) {
-								var link = `https://bsky.app/profile/${bskyData.handle}/posts/${justification[k]}`
+							element.innerHTML += `<h1>${label.name}</h1><h2>Reasoning: ${label.reasoning}</h2><h3>Justifications:</h3>`;
+							var justifications = users[i].labels[j].justifications;
+							for (var k = 0; k < justifications.length; k++) {
+								var link = `https://bsky.app/profile/${bskyData.handle}/posts/${justifications[k]}`
 								element.innerHTML += `<a href=${link}>${link}</a><br>`
 							}
 						}
