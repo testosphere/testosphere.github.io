@@ -3,22 +3,23 @@
 	<head>
 		<title>Trackosphere</title>
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+		<link rel="stylesheet" href="/jetbrains-mono.css">
 		<link rel="stylesheet" href="/style.css">
 	</head>
 	<body>
 		<input type="text" placeholder="Enter DID or handle" maxlength="256" id="didSearch" onkeydown="search(this)">
-		<div id="lololol">
+		<div id="trackosphereInfo">
 		</div>
 		<script>
-function search(ele) {
+function search(id) {
     if(event.key === 'Enter') {
 		var bskyData;
 		var labelerData;
 		
-		var element = document.getElementById("lololol");
-		console.log(ele.value);
+		var element = document.getElementById("trackosphereInfo");
+		console.log(id.value);
 		// fetch bsky info
-		$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + ele.value, function(data) {
+		$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + id.value, function(data) {
 			bskyData = data;
 		}).done((response) => {
 			// display avatar, display name, handle, and did
@@ -50,8 +51,10 @@ function search(ele) {
 							element.innerHTML += `<h1>${label.name}</h1><h2>Reasoning: ${label.reasoning}</h2><h3>Justifications:</h3>`;
 							var justifications = users[i].labels[j].justifications;
 							for (var k = 0; k < justifications.length; k++) {
-								var link = `https://bsky.app/profile/${bskyData.handle}/posts/${justifications[k]}`
-								element.innerHTML += `<a href=${link}>${link}</a><br>`
+								var link = `https://bsky.app/profile/${bskyData.handle}/post/${justifications[k]}`
+								$.getJSON(`https://embed.bsky.app/oembed?url=${link}`, function(embed) {
+									element.innerHTML += embed.html;
+								});
 							}
 						}
 						
