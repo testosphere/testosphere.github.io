@@ -1,12 +1,12 @@
 {
-  "Users": [
+  "users": [
     {
-      "Did": "tshzimytn4vesorvxd45kjn7",
-      "Labels": [
+      "did": "tshzimytn4vesorvxd45kjn7",
+      "labels": [
         {
-          "Id": "test",
-          "Reasoning": "Test Reason Plzzzzzzz worl !!!!",
-          "Justifications": [
+          "id": "test",
+          "reasoning": "Test Reason Plzzzzzzz worl !!!!",
+          "justifications": [
             "3l7mn3g2bmn2z"
           ]
         }
