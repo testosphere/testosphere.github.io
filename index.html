@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Trackosphere</title>
+		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+		<link rel="stylesheet" href="/style.css">
+	</head>
+	<body>
+		<input type="text" placeholder="Enter DID or handle" maxlength="256" id="didSearch" onkeydown="search(this)">
+		<div id="lololol">
+		</div>
+		<script>
+function search(ele) {
+    if(event.key === 'Enter') {
+		var bskyData;
+		var labelerData;
+		
+		var element = document.getElementById("lololol");
+		console.log(ele.value);
+		// fetch bsky info
+		$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + ele.value, function(data) {
+			bskyData = data;
+		}).done((response) => {
+			// display avatar, display name, handle, and did
+			element.innerHTML = `
+				<h1>
+					<img src=${bskyData.avatar} width="64" height="64" class="avatar">
+					<div class="bsky_handle">
+						${bskyData.displayName} @${bskyData.handle}
+					</div>
+				</h1>
+				<h3>
+					${bskyData.did}
+				</h3>`;
+			
+			// did w/o did:plc
+			var did = bskyData.did.split(":")[2];
+			
+			$.getJSON(`/data/${did[0]}/${did[0] + did[1]}.json`, function(infractions) {
+				var users = infractions.users;
+				
+				for (var i = 0; i < users.length; i++) {
+					if (users[i].did == did) {
+						element.innerHTML += `<h1>${users[i].labels.length} labels found</h1>`;
+						element.innerHTML += "<br>";
+						
+						for (var j = 0; j < users[i].labels.length; j++) {
+							var label = users[i].labels[j];
+							
+							element.innerHTML += `<h1>${label.name}</h1><h2>Reasoning: ${label.reasoning}</h2><h3>Justification:</h3>`;
+							var justification = users[i].labels[j].justification;
+							for (var k = 0; k < justification.length; k++) {
+								var link = `https://bsky.app/profile/${bskyData.handle}/posts/${justification[k]}`
+								element.innerHTML += `<a href=${link}>${link}</a><br>`
+							}
+						}
+						
+						break;
+					}
+				}
+
+				element.innerHTML += "<h3>Ok!</h3>";
+			})
+			.fail((response) => {
+				element.innerHTML += "<h3>No entries found for this user!</h3>";
+			});
+		})
+		.fail((response) => {
+			element.innerHTML = `<h3>No account with this DID or handle was found!</h3>`;
+		});
+    }
+}
+		</script>
+	</body>
+</html>
