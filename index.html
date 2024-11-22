@@ -5,74 +5,106 @@
 		<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 		<link rel="stylesheet" href="/jetbrains-mono.css">
 		<link rel="stylesheet" href="/style.css">
-	</head>
-	<body>
-		<input type="text" placeholder="Enter DID or handle" maxlength="256" id="didSearch" onkeydown="search(this)">
-		<div id="trackosphereInfo">
-		</div>
 		<script>
-function search(id) {
-    if(event.key === 'Enter') {
-		var bskyData;
-		var labelerData;
-		
-		var element = document.getElementById("trackosphereInfo");
-		console.log(id.value);
-		// fetch bsky info
-		$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + id.value, function(data) {
-			bskyData = data;
-		}).done((response) => {
-			// display avatar, display name, handle, and did
-			element.innerHTML = `
-				<h1>
-					<img src=${bskyData.avatar} width="64" height="64" class="avatar">
-					<div class="bsky_handle">
-						${bskyData.displayName} @${bskyData.handle}
-					</div>
-				</h1>
-				<h3>
-					${bskyData.did}
-				</h3>`;
+			function checkParametersThenSearch(urlString) {
+				var paramString = urlString.split('?')[1];
+				var param = paramString.split('&')[0]; // only supporting searching by did/handle for now
+
+				var pair = param.split('=');
+				var paramKey = pair[0];
+				var paramValue = pair[1];
 			
-			// did w/o did:plc
-			var did = bskyData.did.split(":")[2];
+				if (paramKey == "at") {
+					search(paramValue);
+				}
+			}
 			
-			$.getJSON(`/data/${did[0]}/${did[0] + did[1]}.json`, function(infractions) {
-				var users = infractions.users;
+			function inputSearch(id) {
+				if(event.key === 'Enter') {
+					search(id.value);
+				}
+			}
+			
+			function search(id) {
+				var bskyData;
+				var labelerData;
 				
-				for (var i = 0; i < users.length; i++) {
-					if (users[i].did == did) {
-						element.innerHTML += `<h1>${users[i].labels.length} labels found</h1>`;
-						element.innerHTML += "<br>";
-						
-						for (var j = 0; j < users[i].labels.length; j++) {
-							var label = users[i].labels[j];
-							
-							element.innerHTML += `<h1>${label.name}</h1><h2>Reasoning: ${label.reasoning}</h2><h3>Justifications:</h3>`;
-							var justifications = users[i].labels[j].justifications;
-							for (var k = 0; k < justifications.length; k++) {
-								var link = `https://bsky.app/profile/${bskyData.handle}/post/${justifications[k]}`
-								$.getJSON(`https://embed.bsky.app/oembed?url=${link}`, function(embed) {
-									element.innerHTML += embed.html;
-								});
+				var element = document.getElementById("info-root");
+				console.log(id.value);
+				// fetch bsky info
+				$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + id, function(data) {
+					bskyData = data;
+				}).done((response) => {
+					var imgSize = 128;
+			
+					// display avatar, display name, handle, and did
+					element.innerHTML = `
+						<div class="container">
+							<img src=${bskyData.avatar} width="${imgSize}" height="${imgSize}" class="avatar">
+							<div class="bsky-handle" width=256px>
+								<div style="font-size: 30px; margin: 20px;">${bskyData.displayName} @${bskyData.handle}</div>
+								<div style="flex-direction: row; font-size: 15px; margin: 20px;">${bskyData.did}</div>
+							</div>
+						</div>`;
+					
+					
+					// did w/o did:plc
+					var did = bskyData.did.split(":")[2];
+					
+					$.getJSON(`/data/${did[0]}/${did[0] + did[1]}.json`, function(infractions) {
+						var users = infractions.users;
+					
+						for (var i = 0; i < users.length; i++) {
+							if (users[i].did == did) {
+								var labelLabels = "label";
+
+								if (users[i].labels.length != 1) {
+									labelLabels += 's';
+								}
+
+								element.innerHTML += `<div class="labels">User has ${users[i].labels.length} ${labelLabels} on their account</div>`;
+								element.innerHTML += "<br>";
+								
+								for (var j = 0; j < users[i].labels.length; j++) {
+									var label = users[i].labels[j];
+
+									element.innerHTML += `
+										<div class="label-name">### ${label.name}</div>
+										<div class="label-reason-title">
+											#### Provided Reason
+											<div class="label-reason-description">${label.reasoning}</div>
+										</div>
+										<div class="label-justification-title">Justifications:</div>
+									`;
+
+									var justifications = users[i].labels[j].justifications;
+									for (var k = 0; k < justifications.length; k++) {
+										var link = `https://bsky.app/profile/${bskyData.handle}/post/${justifications[k]}`;
+										element.innerHTML += `<div class="label-justification-item"><a href=${link}>${justifications[k]}</a></div>`;
+									}
+								}
+								
+								break;
 							}
 						}
-						
-						break;
-					}
-				}
-
-				element.innerHTML += "<h3>Ok!</h3>";
-			})
-			.fail((response) => {
-				element.innerHTML += "<h3>No entries found for this user!</h3>";
-			});
-		})
-		.fail((response) => {
-			element.innerHTML = `<h3>No account with this DID or handle was found!</h3>`;
-		});
-    }
-}
+			
+						element.innerHTML += "<h3>Ok!</h3>";
+					})
+					.fail((response) => {
+						element.innerHTML += "<h3>No entries found for this user!</h3>";
+					});
+				})
+				.fail((response) => {
+					element.innerHTML = `<h3>No account with this DID or handle was found!</h3>`;
+				});
+			}
 		</script>
+	</head>
+	<body onload="checkParametersThenSearch(window.location.search)">
+		<div>
+			<input type="text" placeholder="Enter DID or handle" maxlength="256" id="did-search" onkeydown="inputSearch(this)">
+		</div>
+		<div id="info-root"></div>
+		<noscript>This site requires javascript to work</noscript>
 	</body>
 </html>
