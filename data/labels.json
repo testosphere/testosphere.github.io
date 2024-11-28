@@ -2,8 +2,7 @@
     {
         "id":"test",
         "name":"Test",
-        "description":
-        "Test",
+        "description": "Test",
         "adultContent": false,
         "severity": "Alert",
         "contentOptions": "None",

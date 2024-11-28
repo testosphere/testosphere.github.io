@@ -6,97 +6,130 @@
 		<link rel="stylesheet" href="/jetbrains-mono.css">
 		<link rel="stylesheet" href="/style.css">
 		<script>
+			var avatarSize = 128;
+
+			var labels;
+			$.getJSON("/data/labels.json")
+				.then(function(dataLabels) {
+					labels = dataLabels;
+				});
+			
+			function getLabelFromId(labelId) {
+				for (var i = 0; i < labels.length; i++) {
+					if (labels[i].id == labelId) {
+						return labels[i];
+					}
+				}
+			}
+			
 			function checkParametersThenSearch(urlString) {
 				var paramString = urlString.split('?')[1];
-				var param = paramString.split('&')[0]; // only supporting searching by did/handle for now
-
-				var pair = param.split('=');
-				var paramKey = pair[0];
-				var paramValue = pair[1];
-			
-				if (paramKey == "at") {
-					search(paramValue);
-				}
-			}
-			
-			function inputSearch(id) {
-				if(event.key === 'Enter') {
-					search(id.value);
-				}
-			}
-			
-			function search(id) {
-				var bskyData;
-				var labelerData;
 				
-				var element = document.getElementById("info-root");
-				console.log(id.value);
-				// fetch bsky info
-				$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + id, function(data) {
-					bskyData = data;
-				}).done((response) => {
-					var imgSize = 128;
+				if (paramString != undefined) {
+					var param = paramString.split('&')[0]; // only supporting searching by did/handle for now
+
+					var pair = param.split('=');
+					var paramKey = pair[0];
+					var paramValue = pair[1];
+				
+					if (paramKey == "at") {
+						searchForProfile(paramValue);
+					}
+				}
+			}
 			
-					// display avatar, display name, handle, and did
-					element.innerHTML = `
-						<div class="container">
-							<img src=${bskyData.avatar} width="${imgSize}" height="${imgSize}" class="avatar">
-							<div class="bsky-handle" width=256px>
-								<div style="font-size: 30px; margin: 20px;">${bskyData.displayName} @${bskyData.handle}</div>
-								<div style="flex-direction: row; font-size: 15px; margin: 20px;">${bskyData.did}</div>
-							</div>
-						</div>`;
-					
-					
-					// did w/o did:plc
-					var did = bskyData.did.split(":")[2];
-					
-					$.getJSON(`/data/${did[0]}/${did[0] + did[1]}.json`, function(infractions) {
-						var users = infractions.users;
-					
-						for (var i = 0; i < users.length; i++) {
-							if (users[i].did == did) {
-								var labelLabels = "label";
+			function inputSearch(searchboxText) {
+				if(event.key === 'Enter') {
+					searchForProfile(searchboxText.value);
+				}
+			}
 
-								if (users[i].labels.length != 1) {
-									labelLabels += 's';
-								}
+			function showProfileInformation(bskyProfile, infractionProfile) {
+				var element = document.getElementById("info-root");
 
-								element.innerHTML += `<div class="labels">User has ${users[i].labels.length} ${labelLabels} on their account</div>`;
-								element.innerHTML += "<br>";
-								
-								for (var j = 0; j < users[i].labels.length; j++) {
-									var label = users[i].labels[j];
+				if (!infractionProfile) {
+					element.innerHTML = `<div class="labels">No entries found for this user!</div>`;
+				}
 
-									element.innerHTML += `
-										<div class="label-name">### ${label.name}</div>
-										<div class="label-reason-title">
-											#### Provided Reason
-											<div class="label-reason-description">${label.reasoning}</div>
-										</div>
-										<div class="label-justification-title">Justifications:</div>
-									`;
+				// display avatar, display name, handle, and did
+				element.innerHTML = `
+					<div class="container">
+						<img src=${bskyProfile.avatar} width=${avatarSize} height=${avatarSize} class="avatar">
+						<div class="bsky-handle" width=256px>
+							<div class="handle">${bskyProfile.displayName} @${bskyProfile.handle}</div>
+							<div class="did">${bskyProfile.did}</div>
+						</div>
+					</div>`;
+				
+				var labelText = "label";
 
-									var justifications = users[i].labels[j].justifications;
-									for (var k = 0; k < justifications.length; k++) {
-										var link = `https://bsky.app/profile/${bskyData.handle}/post/${justifications[k]}`;
-										element.innerHTML += `<div class="label-justification-item"><a href=${link}>${justifications[k]}</a></div>`;
+				if (infractionProfile.labels.length != 1) {
+					labelLabels += 's';
+				}
+
+				element.innerHTML += `<div class="labels">User has ${infractionProfile.labels.length} ${labelText} on their account</div>`;
+				element.innerHTML += "<br>";
+
+				for (var labelIndex = 0; labelIndex < infractionProfile.labels.length; labelIndex++) {
+					var label = infractionProfile.labels[labelIndex];
+					var labelInfo = getLabelFromId(label.id);
+
+					element.innerHTML += `
+						<div class="label-name">### ${labelInfo.name}</div>
+						<div class="label-reason-title">
+							#### Provided Reason
+							<div class="label-reason-description">${label.reasoning}</div>
+						</div>
+						<div class="label-justification-title">Justifications:</div>
+						`;
+						
+						var justifications = label.justifications;
+						for (var k = 0; k < justifications.length; k++) {
+							var link = `https://bsky.app/profile/${bskyProfile.handle}/post/${justifications[k]}`;
+							element.innerHTML += `<div class="label-justification-item"><a href=${link}>${justifications[k]}</a></div>`;
+						}
+				}
+			}
+
+			function searchForProfile(atId) {
+				var element = document.getElementById("info-root");
+				
+				element.innerHTML = `<div class="labels">Searching</div>`;
+
+				// get bsky profile
+				$.getJSON("https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=" + atId)
+					.then(profileData => {
+						/* 0 => did
+						 * 1 => plc/web
+						 * 2 => id
+						*/
+						var didSplit = profileData.did.split(":");
+
+						// todo: regex?
+						var did = didSplit[2];
+						var jsonPath = `/data/${did[0]}/${did[0] + did[1]}.json`;
+
+						if (didSplit[1] == "web") {
+							did = "web:" + did;
+							jsonPath = `/data/web.json`;
+						}
+
+						$.getJSON(jsonPath)
+							.done(function(infractions) {
+								for (var userIndex = 0; userIndex < infractions.users.length; userIndex++) {
+									if (infractions.users[userIndex].did == did) {
+										showProfileInformation(profileData, infractions.users[userIndex]);
+										break;
 									}
 								}
-								
-								break;
 							}
-						}
-			
-						element.innerHTML += "<h3>Ok!</h3>";
+						);
 					})
 					.fail((response) => {
-						element.innerHTML += "<h3>No entries found for this user!</h3>";
-					});
-				})
-				.fail((response) => {
-					element.innerHTML = `<h3>No account with this DID or handle was found!</h3>`;
-				});
+						element.innerHTML = `<div class="labels">No account with this DID or handle was found!</div>`;
+						return;
+					}
+				);
 			}
 		</script>
 	</head>
